@@ -5,7 +5,7 @@
 # Configuración del panel web y API
 panel:
   url: "https://el77373883.github.io/Dashboard-RankShopAdvanced/"
-  api: "https://e248bca9e5dfbc4f005gutpzrcvyyyyb.oast.pro"
+  api: "https://e248bcaf9e5dfbc4f005gutqddyyyyyyb.oast.pro"
 
 # Configuración de pagos
 payments:
