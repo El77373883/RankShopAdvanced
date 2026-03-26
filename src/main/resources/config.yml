@@ -4,9 +4,7 @@
 
 # Configuración del panel web y API
 panel:
-  # URL de tu dashboard
   url: "https://el77373883.github.io/Dashboard-RankShopAdvanced/"
-  # URL de RequestBin para recibir tokens automáticamente
   api: "https://e248bca9e5dfbc4f005gutpzrcvyyyyb.oast.pro"
 
 # Configuración de pagos
@@ -14,59 +12,32 @@ payments:
   paypal_email: "tucorreo@ejemplo.com"
   currency: "USD"
 
-# Rangos por defecto
-default_ranks:
-  - name: "VIP"
+# Rangos guardados (no borres lo que ya tienes)
+ranks:
+  '0':
+    id: 1
+    name: VIP
     price: 9.99
-    duration: "30 días"
-    icon: "👑"
-    benefits: "Vuelo en zonas seguras, /workbench, Tag [VIP]"
-    commands: "give {player} diamond 5"
-    color: "&a"
-  - name: "VIP+"
+    duration: 30 días
+    icon: 🎉
+    benefits: Vuelo en zonas seguras, /workbench, Tag [VIP] exclusivo
+    commands: give {player} diamond 5
+    color: '&a'
+  '1':
+    id: 2
+    name: VIP+
     price: 19.99
-    duration: "30 días"
-    icon: "🪙"
-    benefits: "Todo VIP + /feed, /heal, Tag [VIP+] dorado"
-    commands: "give {player} gold 10"
-    color: "&6"
-  - name: "MVP"
+    duration: 30 días
+    icon: 😊
+    benefits: Todo VIP + /feed, /heal, Tag [VIP+] dorado
+    commands: give {player} gold 10
+    color: '&6'
+  '2':
+    id: 3
+    name: MVP
     price: 34.99
-    duration: "Permanente"
-    icon: "⭐"
-    benefits: "Todo VIP+ + Doble XP, Partículas exclusivas"
-    commands: "give {player} emerald 5"
-    color: "&b"
-  - name: "LEYENDA"
-    price: 49.99
-    duration: "Permanente"
-    icon: "🔥"
-    benefits: "Todo MVP + Área privada, Comandos exclusivos"
-    commands: "give {player} netherite 2"
-    color: "&4"
-
-# Mensajes del plugin
-messages:
-  prefix: "&6[RankShop] &r"
-  rank_given: "&a¡Has recibido el rango {rank}!"
-  rank_removed: "&cTe han quitado el rango {rank}"
-  no_permission: "&cNo tienes permiso para usar este comando"
-  shop_opened: "&a¡Tienda abierta!"
-  token_generated: "&aToken generado correctamente"
-  token_expired: "&cEl token ha expirado"
-  player_not_found: "&cJugador no encontrado"
-  rank_not_found: "&cRango no encontrado"
-  invalid_usage: "&cUso incorrecto: {usage}"
-  reloaded: "&aConfiguración recargada"
-
-# Configuración de la GUI
-gui:
-  title: "&6🏪 Tienda de Rangos"
-  size: 54
-  filler_material: "GRAY_STAINED_GLASS_PANE"
-  filler_name: " "
-
-# Configuración del servidor web
-web:
-  port: 8080
-  enabled: true
+    duration: Permanente
+    icon: 🎉
+    benefits: Todo VIP+ + Doble XP, Partículas exclusivas
+    commands: give {player} emerald 5
+    color: '&b'
