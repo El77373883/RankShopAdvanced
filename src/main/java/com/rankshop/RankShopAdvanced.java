@@ -40,9 +40,9 @@ public class RankShopAdvanced extends JavaPlugin implements Listener {
         
         detectServerInfo();
         
-        getCommand("rsa").setExecutor(new AdminCommand());
-        getCommand("rsatoken").setExecutor(new TokenCommand());
-        getCommand("tienda").setExecutor(new ShopCommand());
+        Objects.requireNonNull(getCommand("rsa")).setExecutor(new AdminCommand());
+        Objects.requireNonNull(getCommand("rsatoken")).setExecutor(new TokenCommand());
+        Objects.requireNonNull(getCommand("tienda")).setExecutor(new ShopCommand());
         
         getServer().getPluginManager().registerEvents(this, this);
         
@@ -94,16 +94,13 @@ public class RankShopAdvanced extends JavaPlugin implements Listener {
         } else {
             ranks.add(new RankData(1, "VIP", 9.99, "30 días", "👑", 
                 "Vuelo en zonas seguras, /workbench, Tag [VIP] exclusivo",
-                "give {player} diamond 5, lp user {player} parent add vip", "&a"));
+                "give {player} diamond 5", "&a"));
             ranks.add(new RankData(2, "VIP+", 19.99, "30 días", "🪙",
-                "Todo VIP + /feed, /heal, Tag [VIP+] dorado, Acceso a /kit vip",
-                "give {player} gold 10, lp user {player} parent add vipplus", "&6"));
+                "Todo VIP + /feed, /heal, Tag [VIP+] dorado",
+                "give {player} gold 10", "&6"));
             ranks.add(new RankData(3, "MVP", 34.99, "Permanente", "⭐",
-                "Todo VIP+ + Doble XP, Partículas exclusivas, Warp VIP, Nickname de color",
-                "give {player} emerald 5, lp user {player} parent add mvp", "&b"));
-            ranks.add(new RankData(4, "LEYENDA", 49.99, "Permanente", "🔥",
-                "Todo MVP + Efectos personalizados, Área privada, Comandos exclusivos",
-                "give {player} netherite 2, lp user {player} parent add leyenda", "&4"));
+                "Todo VIP+ + Doble XP, Partículas exclusivas",
+                "give {player} emerald 5", "&b"));
             saveRanks();
         }
     }
@@ -134,9 +131,7 @@ public class RankShopAdvanced extends JavaPlugin implements Listener {
     public String generateToken(Player player) {
         String token = UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         activeTokens.put(token, System.currentTimeMillis() + (30 * 60 * 1000));
-        
         registerWithPanel(player, token);
-        
         return token;
     }
     
@@ -160,7 +155,6 @@ public class RankShopAdvanced extends JavaPlugin implements Listener {
                 
                 getLogger().info("✅ Servidor registrado en el panel web");
                 getLogger().info("🔑 Token: " + token);
-                getLogger().info("🌐 Panel: https://el77373883.github.io/Dashboard-RankShopAdvanced/");
                 
             } catch (Exception e) {
                 getLogger().warning("Error al registrar en panel: " + e.getMessage());
@@ -180,7 +174,7 @@ public class RankShopAdvanced extends JavaPlugin implements Listener {
     
     public void openRankShop(Player player) {
         if (ranks.isEmpty()) {
-            player.sendMessage(ChatColor.RED + "No hay rangos disponibles en este momento");
+            player.sendMessage(ChatColor.RED + "No hay rangos disponibles");
             return;
         }
         
@@ -190,18 +184,10 @@ public class RankShopAdvanced extends JavaPlugin implements Listener {
         
         Inventory inv = Bukkit.createInventory(null, size, ChatColor.GOLD + "🏪 Tienda de Rangos");
         
-        for (int i = 0; i < ranks.size() && i < size; i++) {
+        for (int i = 0; i < ranks.size(); i++) {
             RankData rank = ranks.get(i);
             ItemStack item = createRankItem(rank);
             inv.setItem(i, item);
-        }
-        
-        ItemStack filler = new ItemStack(Material.GRAY_STAINED_GLASS_PANE);
-        ItemMeta fillerMeta = filler.getItemMeta();
-        fillerMeta.setDisplayName(" ");
-        filler.setItemMeta(fillerMeta);
-        for (int i = ranks.size(); i < size; i++) {
-            inv.setItem(i, filler);
         }
         
         player.openInventory(inv);
@@ -226,15 +212,6 @@ public class RankShopAdvanced extends JavaPlugin implements Listener {
         }
         
         lore.add(ChatColor.GRAY + "━━━━━━━━━━━━━━━━━━━━");
-        
-        if (rank.commands != null && !rank.commands.isEmpty()) {
-            lore.add(ChatColor.DARK_GRAY + "⚡ Comandos al comprar:");
-            for (String cmd : rank.commands.split(",")) {
-                lore.add(ChatColor.GRAY + "  /" + cmd.trim());
-            }
-            lore.add(ChatColor.GRAY + "━━━━━━━━━━━━━━━━━━━━");
-        }
-        
         lore.add(ChatColor.GOLD + "🖱️ Haz clic para comprar");
         
         meta.setLore(lore);
@@ -245,20 +222,10 @@ public class RankShopAdvanced extends JavaPlugin implements Listener {
     private Material getMaterialFromIcon(String icon) {
         switch (icon) {
             case "💎": return Material.DIAMOND;
-            case "⚙️": return Material.NETHERITE_INGOT;
             case "🪙": return Material.GOLD_INGOT;
-            case "🟢": return Material.EMERALD;
-            case "📦": return Material.CHEST;
-            case "⛑️": return Material.IRON_HELMET;
-            case "⚔️": return Material.DIAMOND_SWORD;
-            case "🧪": return Material.POTION;
             case "⭐": return Material.NETHER_STAR;
             case "👑": return Material.GOLDEN_HELMET;
-            case "📖": return Material.BOOK;
-            case "🪽": return Material.ELYTRA;
             case "🔥": return Material.BLAZE_POWDER;
-            case "⚡": return Material.LIGHTNING_ROD;
-            case "🔮": return Material.END_CRYSTAL;
             default: return Material.PAPER;
         }
     }
@@ -286,11 +253,8 @@ public class RankShopAdvanced extends JavaPlugin implements Listener {
             }
             player.sendMessage("");
             player.sendMessage(ChatColor.YELLOW + "⏰ Duración: " + ChatColor.WHITE + rank.duration);
-            player.sendMessage(ChatColor.YELLOW + "💰 Precio: " + ChatColor.WHITE + "$" + rank.price);
-            player.sendMessage("");
-            player.sendMessage(ChatColor.GRAY + "Para comprar, ve a: " + ChatColor.WHITE + "https://el77373883.github.io/Dashboard-RankShopAdvanced/tienda.html?token=" + getServerToken());
+            player.sendMessage(ChatColor.GRAY + "Compra en: https://el77373883.github.io/Dashboard-RankShopAdvanced/");
             player.sendMessage(ChatColor.GOLD + "=========================================");
-            player.sendMessage("");
         }
     }
     
@@ -303,12 +267,10 @@ public class RankShopAdvanced extends JavaPlugin implements Listener {
     
     public void executeRankCommands(Player player, RankData rank) {
         if (rank.commands == null || rank.commands.isEmpty()) return;
-        
         for (String cmd : rank.commands.split(",")) {
             String command = cmd.trim().replace("{player}", player.getName());
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
         }
-        
         player.sendMessage(ChatColor.GREEN + "✅ ¡Has recibido el rango " + rank.name + ChatColor.GREEN + "!");
     }
     
@@ -359,12 +321,9 @@ public class RankShopAdvanced extends JavaPlugin implements Listener {
             String token = generateToken(player);
             player.sendMessage("");
             player.sendMessage(ChatColor.GOLD + "=========================================");
-            player.sendMessage(ChatColor.GREEN + "🔑 ¡Token generado correctamente!");
-            player.sendMessage("");
-            player.sendMessage(ChatColor.YELLOW + "📋 Token: " + ChatColor.WHITE + token);
-            player.sendMessage(ChatColor.YELLOW + "🌐 Panel: " + ChatColor.WHITE + "https://el77373883.github.io/Dashboard-RankShopAdvanced/");
-            player.sendMessage("");
-            player.sendMessage(ChatColor.GRAY + "⚠️ El token expira en 30 minutos");
+            player.sendMessage(ChatColor.GREEN + "🔑 Token generado: " + ChatColor.WHITE + token);
+            player.sendMessage(ChatColor.YELLOW + "🌐 Panel: https://el77373883.github.io/Dashboard-RankShopAdvanced/");
+            player.sendMessage(ChatColor.GRAY + "⚠️ Válido por 30 minutos");
             player.sendMessage(ChatColor.GOLD + "=========================================");
             return true;
         }
@@ -378,10 +337,6 @@ public class RankShopAdvanced extends JavaPlugin implements Listener {
                 return true;
             }
             Player player = (Player) sender;
-            if (!player.hasPermission("rankshop.user")) {
-                player.sendMessage(ChatColor.RED + "No tienes permiso");
-                return true;
-            }
             openRankShop(player);
             return true;
         }
@@ -397,10 +352,9 @@ public class RankShopAdvanced extends JavaPlugin implements Listener {
             
             if (args.length == 0) {
                 sender.sendMessage(ChatColor.GOLD + "=== RankShopAdvanced ===");
-                sender.sendMessage(ChatColor.YELLOW + "/rsatoken " + ChatColor.GRAY + "- Generar token para panel");
-                sender.sendMessage(ChatColor.YELLOW + "/tienda " + ChatColor.GRAY + "- Abrir tienda de rangos");
-                sender.sendMessage(ChatColor.YELLOW + "/rsa dar <jugador> <rango> " + ChatColor.GRAY + "- Dar rango manual");
-                sender.sendMessage(ChatColor.YELLOW + "/rsa reload " + ChatColor.GRAY + "- Recargar configuración");
+                sender.sendMessage(ChatColor.YELLOW + "/rsatoken " + ChatColor.GRAY + "- Generar token");
+                sender.sendMessage(ChatColor.YELLOW + "/tienda " + ChatColor.GRAY + "- Abrir tienda");
+                sender.sendMessage(ChatColor.YELLOW + "/rsa reload " + ChatColor.GRAY + "- Recargar");
                 return true;
             }
             
@@ -424,7 +378,7 @@ public class RankShopAdvanced extends JavaPlugin implements Listener {
                     return true;
                 }
                 executeRankCommands(target, rank);
-                sender.sendMessage(ChatColor.GREEN + "✅ Rango " + rankName + " dado a " + target.getName());
+                sender.sendMessage(ChatColor.GREEN + "✅ Rango dado a " + target.getName());
                 return true;
             }
             
