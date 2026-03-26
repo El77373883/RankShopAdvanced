@@ -19,6 +19,9 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
     
+    - name: Clean Maven cache
+      run: rm -rf ~/.m2/repository/org/spigotmc ~/.m2/repository/io/papermc
+    
     - name: Build with Maven
       run: mvn clean package
     
