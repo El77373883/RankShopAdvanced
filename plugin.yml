@@ -1,0 +1,20 @@
+name: RankShopAdvanced
+version: 1.0.0
+main: com.rankshop.RankShopAdvanced
+api-version: 1.21
+author: TuNombre
+description: Plugin de tienda de rangos
+
+commands:
+  rsa:
+    description: Comando principal
+  rsatoken:
+    description: Genera token
+  tienda:
+    description: Abre la tienda
+
+permissions:
+  rankshop.admin:
+    default: op
+  rankshop.user:
+    default: true
