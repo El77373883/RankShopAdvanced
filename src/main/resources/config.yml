@@ -2,21 +2,19 @@
 # RankShopAdvanced Configuración
 # ============================================
 
-# Configuración del panel web
+# Configuración del panel web y API
 panel:
-  # URL de tu dashboard (cambia por la tuya)
+  # URL de tu dashboard
   url: "https://el77373883.github.io/Dashboard-RankShopAdvanced/"
-  # API para registrar tokens
-  api: "https://el77373883.github.io/Dashboard-RankShopAdvanced/api/register"
+  # URL de RequestBin para recibir tokens automáticamente
+  api: "https://e248bca9e5dfbc4f005gutpzrcvyyyyb.oast.pro"
 
 # Configuración de pagos
 payments:
-  # Email de PayPal para recibir pagos
   paypal_email: "tucorreo@ejemplo.com"
-  # Moneda: USD, EUR, MXN, COP, ARS
   currency: "USD"
 
-# Rangos por defecto (se cargan la primera vez)
+# Rangos por defecto
 default_ranks:
   - name: "VIP"
     price: 9.99
@@ -68,7 +66,7 @@ gui:
   filler_material: "GRAY_STAINED_GLASS_PANE"
   filler_name: " "
 
-# Configuración del servidor web (para API)
+# Configuración del servidor web
 web:
   port: 8080
   enabled: true
