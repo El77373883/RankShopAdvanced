@@ -52,6 +52,8 @@ public class RankShopAdvanced extends JavaPlugin implements Listener {
         getLogger().info("  RankShopAdvanced v1.0.0");
         getLogger().info("  IP detectada: " + serverIp + ":" + serverPort);
         getLogger().info("  ¡Plugin iniciado!");
+        getLogger().info("  Usa /tienda para abrir la tienda");
+        getLogger().info("  Usa /rsatoken para generar token");
         getLogger().info("=========================================");
     }
     
@@ -64,28 +66,44 @@ public class RankShopAdvanced extends JavaPlugin implements Listener {
                 serverIp = reader.readLine();
             }
             serverPort = getServer().getPort();
+            getLogger().info("IP detectada: " + serverIp + ":" + serverPort);
         } catch (Exception e) {
             try {
                 serverIp = InetAddress.getLocalHost().getHostAddress();
+                getLogger().warning("Usando IP local: " + serverIp);
             } catch (Exception ex) {
                 serverIp = "localhost";
+                getLogger().warning("No se pudo detectar IP, usando localhost");
             }
         }
     }
     
     private void loadRanks() {
         if (getConfig().contains("ranks")) {
-            // Cargar desde config
+            for (String key : getConfig().getConfigurationSection("ranks").getKeys(false)) {
+                int id = getConfig().getInt("ranks." + key + ".id");
+                String name = getConfig().getString("ranks." + key + ".name");
+                double price = getConfig().getDouble("ranks." + key + ".price");
+                String duration = getConfig().getString("ranks." + key + ".duration");
+                String icon = getConfig().getString("ranks." + key + ".icon");
+                String benefits = getConfig().getString("ranks." + key + ".benefits");
+                String commands = getConfig().getString("ranks." + key + ".commands");
+                String color = getConfig().getString("ranks." + key + ".color");
+                ranks.add(new RankData(id, name, price, duration, icon, benefits, commands, color));
+            }
         } else {
             ranks.add(new RankData(1, "VIP", 9.99, "30 días", "👑", 
-                "Vuelo, /workbench, Tag [VIP]",
-                "give {player} diamond 5", "&a"));
+                "Vuelo en zonas seguras, /workbench, Tag [VIP] exclusivo",
+                "give {player} diamond 5, lp user {player} parent add vip", "&a"));
             ranks.add(new RankData(2, "VIP+", 19.99, "30 días", "🪙",
-                "Todo VIP + /feed, /heal",
-                "give {player} gold 10", "&6"));
+                "Todo VIP + /feed, /heal, Tag [VIP+] dorado, Acceso a /kit vip",
+                "give {player} gold 10, lp user {player} parent add vipplus", "&6"));
             ranks.add(new RankData(3, "MVP", 34.99, "Permanente", "⭐",
-                "Todo VIP+ + Doble XP, Partículas",
-                "give {player} emerald 5", "&b"));
+                "Todo VIP+ + Doble XP, Partículas exclusivas, Warp VIP, Nickname de color",
+                "give {player} emerald 5, lp user {player} parent add mvp", "&b"));
+            ranks.add(new RankData(4, "LEYENDA", 49.99, "Permanente", "🔥",
+                "Todo MVP + Efectos personalizados, Área privada, Comandos exclusivos",
+                "give {player} netherite 2, lp user {player} parent add leyenda", "&4"));
             saveRanks();
         }
     }
@@ -106,10 +124,23 @@ public class RankShopAdvanced extends JavaPlugin implements Listener {
         saveConfig();
     }
     
+    public void syncRanksFromPanel(List<RankData> newRanks) {
+        ranks = newRanks;
+        saveRanks();
+        getLogger().info("Rangos sincronizados desde el panel: " + ranks.size() + " rangos");
+        Bukkit.broadcastMessage(ChatColor.GREEN + "🏪 ¡La tienda de rangos ha sido actualizada!");
+    }
+    
     public String generateToken(Player player) {
         String token = UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         activeTokens.put(token, System.currentTimeMillis() + (30 * 60 * 1000));
         
+        registerWithPanel(player, token);
+        
+        return token;
+    }
+    
+    private void registerWithPanel(Player player, String token) {
         Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
             try {
                 URL url = new URL("https://el77373883.github.io/Dashboard-RankShopAdvanced/api/register");
@@ -119,38 +150,58 @@ public class RankShopAdvanced extends JavaPlugin implements Listener {
                 conn.setDoOutput(true);
                 
                 String json = String.format(
-                    "{\"token\":\"%s\",\"ip\":\"%s\",\"port\":%d,\"serverName\":\"%s\"}",
-                    token, serverIp, serverPort, getServer().getName()
+                    "{\"token\":\"%s\",\"ip\":\"%s\",\"port\":%d,\"serverName\":\"%s\",\"owner\":\"%s\"}",
+                    token, serverIp, serverPort, getServer().getName(), player.getName()
                 );
                 
                 try (OutputStream os = conn.getOutputStream()) {
                     os.write(json.getBytes(StandardCharsets.UTF_8));
                 }
                 
-                getLogger().info("✅ Servidor registrado - Token: " + token);
+                getLogger().info("✅ Servidor registrado en el panel web");
+                getLogger().info("🔑 Token: " + token);
+                getLogger().info("🌐 Panel: https://el77373883.github.io/Dashboard-RankShopAdvanced/");
+                
             } catch (Exception e) {
-                getLogger().warning("Error: " + e.getMessage());
+                getLogger().warning("Error al registrar en panel: " + e.getMessage());
             }
         });
-        
-        return token;
+    }
+    
+    public boolean validateToken(String token) {
+        Long expiry = activeTokens.get(token);
+        if (expiry == null) return false;
+        if (System.currentTimeMillis() > expiry) {
+            activeTokens.remove(token);
+            return false;
+        }
+        return true;
     }
     
     public void openRankShop(Player player) {
         if (ranks.isEmpty()) {
-            player.sendMessage(ChatColor.RED + "No hay rangos");
+            player.sendMessage(ChatColor.RED + "No hay rangos disponibles en este momento");
             return;
         }
         
         int size = (int) Math.ceil(ranks.size() / 9.0) * 9;
         if (size < 9) size = 9;
+        if (size > 54) size = 54;
         
         Inventory inv = Bukkit.createInventory(null, size, ChatColor.GOLD + "🏪 Tienda de Rangos");
         
-        for (int i = 0; i < ranks.size(); i++) {
+        for (int i = 0; i < ranks.size() && i < size; i++) {
             RankData rank = ranks.get(i);
             ItemStack item = createRankItem(rank);
             inv.setItem(i, item);
+        }
+        
+        ItemStack filler = new ItemStack(Material.GRAY_STAINED_GLASS_PANE);
+        ItemMeta fillerMeta = filler.getItemMeta();
+        fillerMeta.setDisplayName(" ");
+        filler.setItemMeta(fillerMeta);
+        for (int i = ranks.size(); i < size; i++) {
+            inv.setItem(i, filler);
         }
         
         player.openInventory(inv);
@@ -169,10 +220,21 @@ public class RankShopAdvanced extends JavaPlugin implements Listener {
         lore.add(ChatColor.YELLOW + "⏰ Duración: " + ChatColor.WHITE + rank.duration);
         lore.add(ChatColor.GRAY + "━━━━━━━━━━━━━━━━━━━━");
         lore.add(ChatColor.GREEN + "✨ Beneficios:");
-        for (String b : rank.benefits.split(",")) {
-            lore.add(ChatColor.WHITE + "  • " + b.trim());
+        
+        for (String benefit : rank.benefits.split(",")) {
+            lore.add(ChatColor.WHITE + "  • " + benefit.trim());
         }
+        
         lore.add(ChatColor.GRAY + "━━━━━━━━━━━━━━━━━━━━");
+        
+        if (rank.commands != null && !rank.commands.isEmpty()) {
+            lore.add(ChatColor.DARK_GRAY + "⚡ Comandos al comprar:");
+            for (String cmd : rank.commands.split(",")) {
+                lore.add(ChatColor.GRAY + "  /" + cmd.trim());
+            }
+            lore.add(ChatColor.GRAY + "━━━━━━━━━━━━━━━━━━━━");
+        }
+        
         lore.add(ChatColor.GOLD + "🖱️ Haz clic para comprar");
         
         meta.setLore(lore);
@@ -183,9 +245,20 @@ public class RankShopAdvanced extends JavaPlugin implements Listener {
     private Material getMaterialFromIcon(String icon) {
         switch (icon) {
             case "💎": return Material.DIAMOND;
+            case "⚙️": return Material.NETHERITE_INGOT;
             case "🪙": return Material.GOLD_INGOT;
+            case "🟢": return Material.EMERALD;
+            case "📦": return Material.CHEST;
+            case "⛑️": return Material.IRON_HELMET;
+            case "⚔️": return Material.DIAMOND_SWORD;
+            case "🧪": return Material.POTION;
             case "⭐": return Material.NETHER_STAR;
             case "👑": return Material.GOLDEN_HELMET;
+            case "📖": return Material.BOOK;
+            case "🪽": return Material.ELYTRA;
+            case "🔥": return Material.BLAZE_POWDER;
+            case "⚡": return Material.LIGHTNING_ROD;
+            case "🔮": return Material.END_CRYSTAL;
             default: return Material.PAPER;
         }
     }
@@ -203,20 +276,48 @@ public class RankShopAdvanced extends JavaPlugin implements Listener {
             RankData rank = ranks.get(slot);
             player.closeInventory();
             
-            player.sendMessage(ChatColor.GREEN + "====================================");
-            player.sendMessage(ChatColor.GOLD + "🏪 " + rank.name + ChatColor.GREEN + " - $" + rank.price);
+            player.sendMessage("");
+            player.sendMessage(ChatColor.GOLD + "=========================================");
+            player.sendMessage(ChatColor.GOLD + "🏪 " + rank.name + ChatColor.YELLOW + " - $" + rank.price);
+            player.sendMessage("");
             player.sendMessage(ChatColor.YELLOW + "✨ Beneficios:");
             for (String b : rank.benefits.split(",")) {
                 player.sendMessage(ChatColor.WHITE + "  • " + b.trim());
             }
             player.sendMessage("");
-            player.sendMessage(ChatColor.GRAY + "Compra en: " + ChatColor.WHITE + "https://el77373883.github.io/Dashboard-RankShopAdvanced/");
-            player.sendMessage(ChatColor.GREEN + "====================================");
+            player.sendMessage(ChatColor.YELLOW + "⏰ Duración: " + ChatColor.WHITE + rank.duration);
+            player.sendMessage(ChatColor.YELLOW + "💰 Precio: " + ChatColor.WHITE + "$" + rank.price);
+            player.sendMessage("");
+            player.sendMessage(ChatColor.GRAY + "Para comprar, ve a: " + ChatColor.WHITE + "https://el77373883.github.io/Dashboard-RankShopAdvanced/tienda.html?token=" + getServerToken());
+            player.sendMessage(ChatColor.GOLD + "=========================================");
+            player.sendMessage("");
         }
+    }
+    
+    private String getServerToken() {
+        for (String token : activeTokens.keySet()) {
+            return token;
+        }
+        return "NO_TOKEN";
+    }
+    
+    public void executeRankCommands(Player player, RankData rank) {
+        if (rank.commands == null || rank.commands.isEmpty()) return;
+        
+        for (String cmd : rank.commands.split(",")) {
+            String command = cmd.trim().replace("{player}", player.getName());
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
+        }
+        
+        player.sendMessage(ChatColor.GREEN + "✅ ¡Has recibido el rango " + rank.name + ChatColor.GREEN + "!");
     }
     
     public static RankShopAdvanced getInstance() {
         return instance;
+    }
+    
+    public List<RankData> getRanks() {
+        return ranks;
     }
     
     public static class RankData {
@@ -230,4 +331,104 @@ public class RankShopAdvanced extends JavaPlugin implements Listener {
         public String color;
         
         public RankData(int id, String name, double price, String duration, String icon, 
-                        String benefits, String commands, String color
+                        String benefits, String commands, String color) {
+            this.id = id;
+            this.name = name;
+            this.price = price;
+            this.duration = duration;
+            this.icon = icon;
+            this.benefits = benefits;
+            this.commands = commands;
+            this.color = color;
+        }
+    }
+    
+    public class TokenCommand implements CommandExecutor {
+        @Override
+        public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+            if (!(sender instanceof Player)) {
+                sender.sendMessage(ChatColor.RED + "Solo jugadores");
+                return true;
+            }
+            Player player = (Player) sender;
+            if (!player.hasPermission("rankshop.admin")) {
+                player.sendMessage(ChatColor.RED + "No tienes permiso");
+                return true;
+            }
+            
+            String token = generateToken(player);
+            player.sendMessage("");
+            player.sendMessage(ChatColor.GOLD + "=========================================");
+            player.sendMessage(ChatColor.GREEN + "🔑 ¡Token generado correctamente!");
+            player.sendMessage("");
+            player.sendMessage(ChatColor.YELLOW + "📋 Token: " + ChatColor.WHITE + token);
+            player.sendMessage(ChatColor.YELLOW + "🌐 Panel: " + ChatColor.WHITE + "https://el77373883.github.io/Dashboard-RankShopAdvanced/");
+            player.sendMessage("");
+            player.sendMessage(ChatColor.GRAY + "⚠️ El token expira en 30 minutos");
+            player.sendMessage(ChatColor.GOLD + "=========================================");
+            return true;
+        }
+    }
+    
+    public class ShopCommand implements CommandExecutor {
+        @Override
+        public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+            if (!(sender instanceof Player)) {
+                sender.sendMessage(ChatColor.RED + "Solo jugadores");
+                return true;
+            }
+            Player player = (Player) sender;
+            if (!player.hasPermission("rankshop.user")) {
+                player.sendMessage(ChatColor.RED + "No tienes permiso");
+                return true;
+            }
+            openRankShop(player);
+            return true;
+        }
+    }
+    
+    public class AdminCommand implements CommandExecutor {
+        @Override
+        public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+            if (!sender.hasPermission("rankshop.admin")) {
+                sender.sendMessage(ChatColor.RED + "No tienes permiso");
+                return true;
+            }
+            
+            if (args.length == 0) {
+                sender.sendMessage(ChatColor.GOLD + "=== RankShopAdvanced ===");
+                sender.sendMessage(ChatColor.YELLOW + "/rsatoken " + ChatColor.GRAY + "- Generar token para panel");
+                sender.sendMessage(ChatColor.YELLOW + "/tienda " + ChatColor.GRAY + "- Abrir tienda de rangos");
+                sender.sendMessage(ChatColor.YELLOW + "/rsa dar <jugador> <rango> " + ChatColor.GRAY + "- Dar rango manual");
+                sender.sendMessage(ChatColor.YELLOW + "/rsa reload " + ChatColor.GRAY + "- Recargar configuración");
+                return true;
+            }
+            
+            if (args[0].equalsIgnoreCase("reload")) {
+                reloadConfig();
+                loadRanks();
+                sender.sendMessage(ChatColor.GREEN + "✅ Configuración recargada");
+                return true;
+            }
+            
+            if (args[0].equalsIgnoreCase("dar") && args.length >= 3) {
+                Player target = Bukkit.getPlayer(args[1]);
+                if (target == null) {
+                    sender.sendMessage(ChatColor.RED + "Jugador no encontrado");
+                    return true;
+                }
+                String rankName = args[2];
+                RankData rank = ranks.stream().filter(r -> r.name.equalsIgnoreCase(rankName)).findFirst().orElse(null);
+                if (rank == null) {
+                    sender.sendMessage(ChatColor.RED + "Rango no encontrado");
+                    return true;
+                }
+                executeRankCommands(target, rank);
+                sender.sendMessage(ChatColor.GREEN + "✅ Rango " + rankName + " dado a " + target.getName());
+                return true;
+            }
+            
+            return true;
+        }
+    }
+}
